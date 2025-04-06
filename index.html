@@ -538,14 +538,14 @@
 };
         
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const app = firebase.initializeApp(firebaseConfig);
-        
-        // References to Firebase services
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const storage = firebase.storage();
-        const rtdb = firebase.database(); // This will now use the correct URL
+        // Initialize Firebase ONLY ONCE
+const app = firebase.initializeApp(firebaseConfig);
+
+// References to Firebase services
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+const rtdb = firebase.database(); // Will use the correct URL from firebaseConfig
         
         
         // Global Variables
