@@ -1,0 +1,1745 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XO Online Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .section {
+            display: none;
+        }
+        .active {
+            display: block;
+        }
+        .xo-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        .xo-cell {
+            width: 90px;
+            height: 90px;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .xo-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .x-marker {
+            color: #FF5252;
+        }
+        .o-marker {
+            color: #4CAF50;
+        }
+        .game-info {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .profile-picture {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto;
+            border: 4px solid #4299e1;
+        }
+        .rank-item {
+            transition: all 0.3s ease;
+        }
+        .rank-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .store-item {
+            transition: all 0.3s ease;
+        }
+        .store-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .show-notification {
+            opacity: 1;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            animation: fall 5s linear infinite;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        .game-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 80%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">XO Online</h1>
+            <div id="nav-buttons" class="hidden">
+                <button onclick="showSection('profile')" class="mx-2 hover:text-blue-200">Profile</button>
+                <button onclick="showSection('game')" class="mx-2 hover:text-blue-200">Play</button>
+                <button onclick="showSection('ranking')" class="mx-2 hover:text-blue-200">Ranking</button>
+                <button onclick="showSection('store')" class="mx-2 hover:text-blue-200">Store</button>
+                <button onclick="logoutUser()" class="ml-4 bg-red-500 px-4 py-2 rounded hover:bg-red-600">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Section -->
+    <section id="login" class="section active container mx-auto p-8">
+        <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-bold text-center mb-6">Welcome to XO Online</h2>
+            <div class="flex justify-center mb-6">
+                <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-gamepad text-white text-4xl"></i>
+                </div>
+            </div>
+            <div id="login-form">
+                <div class="mb-4">
+                    <label for="email" class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="email" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300" placeholder="Enter your email">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300" placeholder="Enter your password">
+                </div>
+                <button onclick="loginUser()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 mb-4">Login</button>
+                <button onclick="toggleAuthMode()" class="w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">Register</button>
+            </div>
+            <div id="register-form" class="hidden">
+                <div class="mb-4">
+                    <label for="reg-username" class="block text-gray-700 mb-2">Username</label>
+                    <input type="text" id="reg-username" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300" placeholder="Choose a username">
+                </div>
+                <div class="mb-4">
+                    <label for="reg-email" class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="reg-email" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300" placeholder="Enter your email">
+                </div>
+                <div class="mb-6">
+                    <label for="reg-password" class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="reg-password" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300" placeholder="Create a password">
+                </div>
+                <button onclick="registerUser()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 mb-4">Register</button>
+                <button onclick="toggleAuthMode()" class="w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">Back to Login</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Profile Section -->
+    <section id="profile" class="section container mx-auto p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-bold text-center mb-6">Your Profile</h2>
+            <div class="flex flex-col md:flex-row">
+                <div class="md:w-1/3 p-4 text-center">
+                    <div class="mb-4 relative">
+                        <img id="profile-image" src="https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png" alt="Profile" class="profile-picture">
+                        <button onclick="document.getElementById('profile-upload').click()" class="absolute bottom-0 right-1/4 bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <input id="profile-upload" type="file" accept="image/*" class="hidden" onchange="uploadProfilePicture(event)">
+                    </div>
+                    <h3 id="profile-username" class="text-xl font-bold mb-2">Username</h3>
+                    <p id="profile-email" class="text-gray-600 mb-4">user@example.com</p>
+                    <div id="profile-effects-container" class="mt-4">
+                        <h4 class="font-bold mb-2">Owned Effects</h4>
+                        <div id="profile-effects" class="flex flex-wrap justify-center gap-2">
+                            <!-- Effects will be added here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="md:w-2/3 p-4">
+                    <div class="bg-blue-50 p-6 rounded-lg mb-6">
+                        <h3 class="text-xl font-bold mb-4">Game Statistics</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded-lg shadow text-center">
+                                <p class="text-gray-500">Wins</p>
+                                <p id="stats-wins" class="text-2xl font-bold text-green-600">0</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow text-center">
+                                <p class="text-gray-500">Losses</p>
+                                <p id="stats-losses" class="text-2xl font-bold text-red-600">0</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow text-center">
+                                <p class="text-gray-500">Draws</p>
+                                <p id="stats-draws" class="text-2xl font-bold text-blue-600">0</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow text-center">
+                                <p class="text-gray-500">Win Rate</p>
+                                <p id="stats-winrate" class="text-2xl font-bold text-purple-600">0%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-6 rounded-lg">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold">Ranking & XP</h3>
+                            <button onclick="showSection('ranking')" class="text-blue-600 hover:text-blue-800">View Leaderboard</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-4 rounded-lg shadow">
+                                <p class="text-gray-500">Current Rank</p>
+                                <div class="flex items-center mt-2">
+                                    <div id="rank-badge" class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl mr-3">#</div>
+                                    <div>
+                                        <p id="rank-title" class="font-bold">Rookie</p>
+                                        <p id="rank-position" class="text-sm text-gray-500">Rank #0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow">
+                                <p class="text-gray-500">XP Points</p>
+                                <div class="mt-2">
+                                    <div class="flex justify-between mb-1">
+                                        <p id="xp-current" class="font-bold">0 XP</p>
+                                        <p id="xp-next" class="text-sm text-gray-500">Next: 100 XP</p>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div id="xp-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Lobby Section -->
+    <section id="game" class="section container mx-auto p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-bold text-center mb-6">Game Lobby</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-blue-50 p-6 rounded-lg shadow text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-random text-5xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Quick Match</h3>
+                    <p class="mb-6 text-gray-600">Play against a random opponent online</p>
+                    <button onclick="findRandomMatch()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-play mr-2"></i> Find Match
+                    </button>
+                </div>
+                <div class="bg-blue-50 p-6 rounded-lg shadow text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-users text-5xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Play with Friends</h3>
+                    <p class="mb-6 text-gray-600">Create or join a private room</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="createRoom()" class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-plus-circle mr-2"></i> Create Room
+                        </button>
+                        <button onclick="showJoinRoomModal()" class="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Join Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="waiting-room" class="hidden mt-8 p-6 bg-gray-50 rounded-lg shadow text-center">
+                <h3 class="text-xl font-bold mb-4">Waiting for Opponent</h3>
+                <div class="loader"></div>
+                <p id="room-code-display" class="mt-4 p-3 bg-blue-100 rounded-lg inline-block">Room Code: <span id="room-code" class="font-bold">XXXX</span></p>
+                <p class="mt-4 text-gray-600">Share this code with your friend to join the game</p>
+                <button onclick="cancelMatchmaking()" class="mt-6 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Play Section -->
+    <section id="gameplay" class="section container mx-auto p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center">
+                    <img id="opponent-image" src="https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png" alt="Opponent" class="w-10 h-10 rounded-full object-cover mr-2">
+                    <h3 id="opponent-name" class="font-bold">Opponent</h3>
+                </div>
+                <div class="text-center">
+                    <div class="flex space-x-2 justify-center mb-2">
+                        <div id="round1" class="w-3 h-3 rounded-full bg-gray-300"></div>
+                        <div id="round2" class="w-3 h-3 rounded-full bg-gray-300"></div>
+                        <div id="round3" class="w-3 h-3 rounded-full bg-gray-300"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">Round <span id="current-round">1</span>/3</p>
+                </div>
+                <div class="flex items-center">
+                    <h3 id="player-name" class="font-bold">You</h3>
+                    <img id="player-image" src="https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png" alt="Player" class="w-10 h-10 rounded-full object-cover ml-2">
+                </div>
+            </div>
+
+            <div class="timer bg-blue-100 rounded-lg py-2 text-center mb-6">
+                Time left: <span id="timer-display">30</span>s
+            </div>
+
+            <div class="game-info mb-6">
+                <h3 id="game-status" class="text-xl font-bold">Your turn</h3>
+                <p id="game-message" class="text-gray-600 mt-2">Make your move by clicking on the board</p>
+            </div>
+
+            <div class="xo-board">
+                <div class="xo-cell" data-index="0" onclick="makeMove(0)"></div>
+                <div class="xo-cell" data-index="1" onclick="makeMove(1)"></div>
+                <div class="xo-cell" data-index="2" onclick="makeMove(2)"></div>
+                <div class="xo-cell" data-index="3" onclick="makeMove(3)"></div>
+                <div class="xo-cell" data-index="4" onclick="makeMove(4)"></div>
+                <div class="xo-cell" data-index="5" onclick="makeMove(5)"></div>
+                <div class="xo-cell" data-index="6" onclick="makeMove(6)"></div>
+                <div class="xo-cell" data-index="7" onclick="makeMove(7)"></div>
+                <div class="xo-cell" data-index="8" onclick="makeMove(8)"></div>
+            </div>
+
+            <div class="flex justify-center mt-8">
+                <button id="leave-game" onclick="leaveGame()" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">
+                    Leave Game
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Results Modal -->
+    <div id="results-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="result-title" class="text-2xl font-bold mb-4">Game Result</h2>
+            <p id="result-message" class="text-lg mb-6">You won the game!</p>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600">XP Earned</p>
+                    <p id="xp-earned" class="text-xl font-bold text-blue-600">+25 XP</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <p class="text-gray-600">Rank Change</p>
+                    <p id="rank-change" class="text-xl font-bold text-green-600">+15</p>
+                </div>
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button onclick="closeResultsAndFindNewMatch()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Play Again
+                </button>
+                <button onclick="closeResultsAndReturnToLobby()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                    Back to Lobby
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="join-room-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Join Room</h2>
+            <p class="mb-4">Enter the room code shared by your friend</p>
+            <input type="text" id="room-code-input" placeholder="Enter room code (e.g. ABCD)" class="w-full px-4 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300 mb-6">
+            <div class="flex justify-center space-x-4">
+                <button onclick="joinRoom()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    Join
+                </button>
+                <button onclick="closeJoinRoomModal()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking Section -->
+    <section id="ranking" class="section container mx-auto p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-bold text-center mb-6">Global Rankings</h2>
+            
+            <div class="mb-8">
+                <div class="bg-blue-600 text-white p-4 rounded-t-lg">
+                    <div class="grid grid-cols-12 gap-4 font-bold">
+                        <div class="col-span-1">Rank</div>
+                        <div class="col-span-5">Player</div>
+                        <div class="col-span-2 text-center">Wins</div>
+                        <div class="col-span-2 text-center">Losses</div>
+                        <div class="col-span-2 text-center">Points</div>
+                    </div>
+                </div>
+                <div id="ranking-list" class="divide-y">
+                    <!-- Rankings will be populated here -->
+                    <div class="p-4 grid grid-cols-12 gap-4 items-center rank-item bg-gray-100">
+                        <div class="col-span-1 font-bold">-</div>
+                        <div class="col-span-5 flex items-center">
+                            <div class="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
+                            <div class="text-gray-400">Loading rankings...</div>
+                        </div>
+                        <div class="col-span-2 text-center text-gray-400">-</div>
+                        <div class="col-span-2 text-center text-gray-400">-</div>
+                        <div class="col-span-2 text-center text-gray-400">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">Your Ranking</h3>
+                <div id="your-rank" class="p-4 grid grid-cols-12 gap-4 items-center bg-blue-100 rounded-lg">
+                    <div id="your-position" class="col-span-1 font-bold">-</div>
+                    <div class="col-span-5 flex items-center">
+                        <img id="your-rank-image" src="https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png" alt="Your Profile" class="w-8 h-8 rounded-full object-cover mr-2">
+                        <div id="your-rank-name">You</div>
+                    </div>
+                    <div id="your-rank-wins" class="col-span-2 text-center">0</div>
+                    <div id="your-rank-losses" class="col-span-2 text-center">0</div>
+                    <div id="your-rank-points" class="col-span-2 text-center font-bold">0</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Store Section -->
+    <section id="store" class="section container mx-auto p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold">XO Store</h2>
+                <div class="bg-blue-100 px-4 py-2 rounded-lg">
+                    <i class="fas fa-gem text-blue-600 mr-2"></i>
+                    <span id="store-xp-balance" class="font-bold">0</span> XP
+                </div>
+            </div>
+            
+            <div class="mb-8">
+                <h3 class="text-xl font-bold mb-4">Game Effects</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="effects-store">
+                    <!-- Effect items will be populated here -->
+                    <div class="bg-gray-50 rounded-lg p-4 store-item shadow-sm">
+                        <div class="h-40 bg-blue-100 rounded-lg mb-4 flex items-center justify-center">
+                            <i class="fas fa-sparkles text-4xl text-blue-500"></i>
+                        </div>
+                        <h4 class="font-bold">Confetti Burst</h4>
+                        <p class="text-sm text-gray-600 mb-4">Celebrate your wins with colorful confetti</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-blue-600 font-bold"><i class="fas fa-gem mr-1"></i> 100 XP</div>
+                            <button class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Buy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-xl font-bold mb-4">Profile Customizations</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="profile-store">
+                    <!-- Profile items will be populated here -->
+                    <div class="bg-gray-50 rounded-lg p-4 store-item shadow-sm">
+                        <div class="h-40 bg-purple-100 rounded-lg mb-4 flex items-center justify-center">
+                            <i class="fas fa-crown text-4xl text-purple-500"></i>
+                        </div>
+                        <h4 class="font-bold">Crown Badge</h4>
+                        <p class="text-sm text-gray-600 mb-4">Show off your royal status with a crown badge</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-blue-600 font-bold"><i class="fas fa-gem mr-1"></i> 150 XP</div>
+                            <button class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Buy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+  apiKey: "AIzaSyAn2aXw1QWmvkpMEwdSKmU1LjdOAczOqE4",
+  authDomain: "iko-515e6.firebaseapp.com",
+  projectId: "iko-515e6",
+  storageBucket: "iko-515e6.firebasestorage.app",
+  messagingSenderId: "65708685986",
+  appId: "1:65708685986:web:5119055938d8ee738375fb",
+  measurementId: "G-HEMNL1R1PP"
+};
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // References to Firebase services
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const rtdb = firebase.database();
+        
+        // Global Variables
+        let currentUser = null;
+        let currentUserData = null;
+        let currentGameId = null;
+        let currentRoomId = null;
+        let gameTimer = null;
+        let timerValue = 30;
+        let currentRound = 1;
+        let roundWins = { player: 0, opponent: 0 };
+        let isMyTurn = false;
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let playerMarker = 'X';
+        let opponentMarker = 'O';
+        let ownedEffects = [];
+        
+        // Store Data
+        const storeItems = {
+            effects: [
+                { id: 'confetti', name: 'Confetti Burst', description: 'Celebrate your wins with colorful confetti', price: 100, icon: 'fas fa-sparkles', bgColor: 'bg-blue-100', iconColor: 'text-blue-500' },
+                { id: 'fireworks', name: 'Fireworks', description: 'Light up the screen with spectacular fireworks', price: 200, icon: 'fas fa-rocket', bgColor: 'bg-red-100', iconColor: 'text-red-500' },
+                { id: 'sparkle', name: 'Sparkle Moves', description: 'Add sparkles to your game moves', price: 150, icon: 'fas fa-magic', bgColor: 'bg-yellow-100', iconColor: 'text-yellow-600' }
+            ],
+            profileItems: [
+                { id: 'crown', name: 'Crown Badge', description: 'Show off your royal status with a crown badge', price: 150, icon: 'fas fa-crown', bgColor: 'bg-purple-100', iconColor: 'text-purple-500' },
+                { id: 'star', name: 'Star Frame', description: 'Frame your profile picture with stars', price: 120, icon: 'fas fa-star', bgColor: 'bg-yellow-100', iconColor: 'text-yellow-500' },
+                { id: 'diamond', name: 'Diamond Badge', description: 'Display your premium status with diamonds', price: 250, icon: 'fas fa-gem', bgColor: 'bg-cyan-100', iconColor: 'text-cyan-500' }
+            ]
+        };
+        
+        // Authentication Functions
+        function toggleAuthMode() {
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            
+            if (loginForm.classList.contains('hidden')) {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+            }
+        }
+        
+        function loginUser() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showNotification('Please enter both email and password', 'bg-red-500');
+                return;
+            }
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    showNotification('Login successful!', 'bg-green-500');
+                })
+                .catch((error) => {
+                    showNotification('Login failed: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        function registerUser() {
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            
+            if (!username || !email || !password) {
+                showNotification('Please fill in all fields', 'bg-red-500');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    
+                    // Create user profile in Firestore
+                    return db.collection('users').doc(user.uid).set({
+                        username: username,
+                        email: email,
+                        profilePicture: 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png',
+                        wins: 0,
+                        losses: 0,
+                        draws: 0,
+                        xp: 0,
+                        points: 1000, // Starting ranking points
+                        ownedItems: [],
+                        createdAt: new Date()
+                    });
+                })
+                .then(() => {
+                    showNotification('Registration successful!', 'bg-green-500');
+                    toggleAuthMode(); // Go back to login form
+                })
+                .catch((error) => {
+                    showNotification('Registration failed: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        function logoutUser() {
+            auth.signOut()
+                .then(() => {
+                    showNotification('Logged out successfully', 'bg-blue-500');
+                    currentUser = null;
+                    currentUserData = null;
+                    showSection('login');
+                })
+                .catch((error) => {
+                    showNotification('Logout failed: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        // Profile Functions
+        function loadUserProfile(userId) {
+            return db.collection('users').doc(userId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        currentUserData = userData;
+                        
+                        // Update profile section
+                        document.getElementById('profile-username').textContent = userData.username;
+                        document.getElementById('profile-email').textContent = userData.email;
+                        document.getElementById('profile-image').src = userData.profilePicture || 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png';
+                        
+                        // Update statistics
+                        document.getElementById('stats-wins').textContent = userData.wins || 0;
+                        document.getElementById('stats-losses').textContent = userData.losses || 0;
+                        document.getElementById('stats-draws').textContent = userData.draws || 0;
+                        
+                        const totalGames = (userData.wins || 0) + (userData.losses || 0) + (userData.draws || 0);
+                        const winRate = totalGames > 0 ? Math.round((userData.wins / totalGames) * 100) : 0;
+                        document.getElementById('stats-winrate').textContent = winRate + '%';
+                        
+                        // Update XP and rank
+                        document.getElementById('xp-current').textContent = userData.xp + ' XP';
+                        const nextLevel = Math.ceil((userData.xp + 1) / 100) * 100;
+                        document.getElementById('xp-next').textContent = 'Next: ' + nextLevel + ' XP';
+                        
+                        const xpProgress = ((userData.xp % 100) / 100) * 100;
+                        document.getElementById('xp-progress').style.width = xpProgress + '%';
+                        
+                        // Update store XP balance
+                        document.getElementById('store-xp-balance').textContent = userData.xp;
+                        
+                        // Load owned effects
+                        ownedEffects = userData.ownedItems || [];
+                        updateOwnedEffects();
+                        
+                        // Fetch and update rank info
+                        fetchUserRankPosition(userId);
+                        
+                        return userData;
+                    } else {
+                        showNotification('User profile not found', 'bg-red-500');
+                        return null;
+                    }
+                })
+                .catch((error) => {
+                    showNotification('Error loading profile: ' + error.message, 'bg-red-500');
+                    return null;
+                });
+        }
+        
+        function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            
+            if (!file) return;
+            
+            const storageRef = storage.ref();
+            const profilePicRef = storageRef.child(`profilePictures/${currentUser.uid}/${file.name}`);
+            
+            // Show loading notification
+            showNotification('Uploading profile picture...', 'bg-blue-500');
+            
+            profilePicRef.put(file).then((snapshot) => {
+                return snapshot.ref.getDownloadURL();
+            }).then((downloadURL) => {
+                // Update user profile with new picture URL
+                return db.collection('users').doc(currentUser.uid).update({
+                    profilePicture: downloadURL
+                }).then(() => {
+                    document.getElementById('profile-image').src = downloadURL;
+                    showNotification('Profile picture updated!', 'bg-green-500');
+                });
+            }).catch((error) => {
+                showNotification('Upload failed: ' + error.message, 'bg-red-500');
+            });
+        }
+        
+        function updateOwnedEffects() {
+            const container = document.getElementById('profile-effects');
+            container.innerHTML = '';
+            
+            if (ownedEffects.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No effects owned yet</p>';
+                return;
+            }
+            
+            ownedEffects.forEach(itemId => {
+                // Find the item in store data
+                let item = null;
+                
+                for (const category of [storeItems.effects, storeItems.profileItems]) {
+                    const found = category.find(i => i.id === itemId);
+                    if (found) {
+                        item = found;
+                        break;
+                    }
+                }
+                
+                if (!item) return;
+                
+                const effectElement = document.createElement('div');
+                effectElement.className = `${item.bgColor} w-10 h-10 rounded-full flex items-center justify-center`;
+                effectElement.innerHTML = `<i class="${item.icon} ${item.iconColor}"></i>`;
+                effectElement.title = item.name;
+                
+                container.appendChild(effectElement);
+            });
+        }
+        
+        function fetchUserRankPosition(userId) {
+            // Get all users sorted by points to determine rank
+            db.collection('users').orderBy('points', 'desc').get()
+                .then((snapshot) => {
+                    let position = 0;
+                    let found = false;
+                    
+                    snapshot.forEach((doc, index) => {
+                        position = index + 1;
+                        if (doc.id === userId) {
+                            found = true;
+                            // Update ranking displays
+                            const rankInfo = getRankTitleByPoints(doc.data().points);
+                            
+                            document.getElementById('rank-badge').textContent = rankInfo.short;
+                            document.getElementById('rank-badge').style.backgroundColor = rankInfo.color;
+                            document.getElementById('rank-title').textContent = rankInfo.title;
+                            document.getElementById('rank-position').textContent = 'Rank #' + position;
+                            
+                            // Update your rank in ranking page
+                            document.getElementById('your-position').textContent = position;
+                            document.getElementById('your-rank-name').textContent = doc.data().username;
+                            document.getElementById('your-rank-image').src = doc.data().profilePicture || 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png';
+                            document.getElementById('your-rank-wins').textContent = doc.data().wins || 0;
+                            document.getElementById('your-rank-losses').textContent = doc.data().losses || 0;
+                            document.getElementById('your-rank-points').textContent = doc.data().points || 0;
+                            
+                            return;
+                        }
+                    });
+                    
+                    if (!found) {
+                        document.getElementById('rank-position').textContent = 'Unranked';
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error fetching rank: ", error);
+                });
+        }
+        
+        function getRankTitleByPoints(points) {
+            if (points >= 2000) return { title: 'Master', short: 'M', color: '#FFD700' }; // Gold
+            if (points >= 1800) return { title: 'Diamond', short: 'D', color: '#B9F2FF' }; // Diamond
+            if (points >= 1600) return { title: 'Platinum', short: 'P', color: '#E5E4E2' }; // Platinum
+            if (points >= 1400) return { title: 'Gold', short: 'G', color: '#D4AF37' }; // Gold
+            if (points >= 1200) return { title: 'Silver', short: 'S', color: '#C0C0C0' }; // Silver
+            if (points >= 1000) return { title: 'Bronze', short: 'B', color: '#CD7F32' }; // Bronze
+            return { title: 'Rookie', short: 'R', color: '#27ae60' }; // Green for rookie
+        }
+        
+        // Game Functions
+        function findRandomMatch() {
+            showNotification('Looking for a match...', 'bg-blue-500');
+            
+            // Create a matchmaking entry in the database
+            const matchmakingRef = rtdb.ref('matchmaking');
+            
+            // First check if there's an available player
+            matchmakingRef.orderByChild('status').equalTo('waiting').limitToFirst(1).once('value')
+                .then((snapshot) => {
+                    const waitingPlayers = snapshot.val();
+                    
+                    if (waitingPlayers) {
+                        // Join existing waiting player
+                        const waitingRoomId = Object.keys(waitingPlayers)[0];
+                        const waitingPlayer = waitingPlayers[waitingRoomId];
+                        
+                        // Make sure we don't match with ourselves
+                        if (waitingPlayer.userId === currentUser.uid) {
+                            createNewMatchmakingRoom();
+                            return;
+                        }
+                        
+                        // Create a new game
+                        createGameWithPlayers(waitingPlayer.userId, currentUser.uid, waitingRoomId);
+                    } else {
+                        // Create a new waiting room
+                        createNewMatchmakingRoom();
+                    }
+                })
+                .catch((error) => {
+                    showNotification('Matchmaking error: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        function createNewMatchmakingRoom() {
+            const waitingRoomRef = rtdb.ref('matchmaking').push();
+            
+            waitingRoomRef.set({
+                userId: currentUser.uid,
+                username: currentUserData.username,
+                profilePicture: currentUserData.profilePicture,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                status: 'waiting'
+            });
+            
+            // Show waiting UI
+            document.getElementById('waiting-room').classList.remove('hidden');
+            document.getElementById('room-code').textContent = 'Finding match...';
+            document.getElementById('room-code-display').classList.add('hidden');
+            
+            currentRoomId = waitingRoomRef.key;
+            
+            // Listen for this room to be matched
+            waitingRoomRef.on('value', (snapshot) => {
+                const roomData = snapshot.val();
+                
+                if (roomData && roomData.status === 'matched' && roomData.gameId) {
+                    // We've been matched! Join the game
+                    waitingRoomRef.off(); // Stop listening
+                    joinGame(roomData.gameId);
+                }
+            });
+        }
+        
+        function createRoom() {
+            // Generate a random 4-letter room code
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let roomCode = '';
+            for (let i = 0; i < 4; i++) {
+                roomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            // Create a private room in the database
+            const roomRef = rtdb.ref('rooms/' + roomCode);
+            
+            roomRef.set({
+                hostId: currentUser.uid,
+                hostName: currentUserData.username,
+                hostPicture: currentUserData.profilePicture,
+                created: firebase.database.ServerValue.TIMESTAMP,
+                status: 'waiting',
+                gameId: null
+            });
+            
+            // Show waiting UI with room code
+            document.getElementById('waiting-room').classList.remove('hidden');
+            document.getElementById('room-code').textContent = roomCode;
+            document.getElementById('room-code-display').classList.remove('hidden');
+            
+            currentRoomId = roomCode;
+            
+            // Listen for someone to join
+            roomRef.on('value', (snapshot) => {
+                const roomData = snapshot.val();
+                
+                if (roomData && roomData.status === 'joined' && roomData.guestId) {
+                    // Someone joined! Create a game
+                    roomRef.off(); // Stop listening
+                    createGameWithPlayers(currentUser.uid, roomData.guestId, roomCode);
+                }
+            });
+        }
+        
+        function showJoinRoomModal() {
+            document.getElementById('join-room-modal').style.display = 'flex';
+        }
+        
+        function closeJoinRoomModal() {
+            document.getElementById('join-room-modal').style.display = 'none';
+            document.getElementById('room-code-input').value = '';
+        }
+        
+        function joinRoom() {
+            const roomCode = document.getElementById('room-code-input').value.toUpperCase();
+            
+            if (!roomCode || roomCode.length !== 4) {
+                showNotification('Please enter a valid room code', 'bg-red-500');
+                return;
+            }
+            
+            // Check if room exists
+            const roomRef = rtdb.ref('rooms/' + roomCode);
+            
+            roomRef.once('value')
+                .then((snapshot) => {
+                    const roomData = snapshot.val();
+                    
+                    if (!roomData) {
+                        showNotification('Room not found', 'bg-red-500');
+                        return;
+                    }
+                    
+                    if (roomData.status !== 'waiting') {
+                        showNotification('Room is no longer available', 'bg-red-500');
+                        return;
+                    }
+                    
+                    if (roomData.hostId === currentUser.uid) {
+                        showNotification('You cannot join your own room', 'bg-red-500');
+                        return;
+                    }
+                    
+                    // Join the room
+                    return roomRef.update({
+                        guestId: currentUser.uid,
+                        guestName: currentUserData.username,
+                        guestPicture: currentUserData.profilePicture,
+                        status: 'joined'
+                    }).then(() => {
+                        closeJoinRoomModal();
+                        showNotification('Joined room successfully!', 'bg-green-500');
+                        
+                        // Show waiting UI
+                        document.getElementById('waiting-room').classList.remove('hidden');
+                        document.getElementById('room-code').textContent = roomCode;
+                        document.getElementById('room-code-display').classList.add('hidden');
+                        
+                        currentRoomId = roomCode;
+                        
+                        // Listen for game creation
+                        roomRef.on('value', (snapshot) => {
+                            const updatedRoom = snapshot.val();
+                            
+                            if (updatedRoom && updatedRoom.gameId) {
+                                // Game has been created!
+                                roomRef.off(); // Stop listening
+                                joinGame(updatedRoom.gameId);
+                            }
+                        });
+                    });
+                })
+                .catch((error) => {
+                    showNotification('Error joining room: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        function createGameWithPlayers(player1Id, player2Id, roomId) {
+            // Create a new game in the database
+            const gameRef = rtdb.ref('games').push();
+            
+            // Get player data
+            const player1Ref = db.collection('users').doc(player1Id);
+            const player2Ref = db.collection('users').doc(player2Id);
+            
+            Promise.all([
+                player1Ref.get(),
+                player2Ref.get()
+            ]).then(([player1Doc, player2Doc]) => {
+                const player1Data = player1Doc.data();
+                const player2Data = player2Doc.data();
+                
+                // Randomly decide who goes first
+                const randomStart = Math.random() >= 0.5;
+                const firstPlayerId = randomStart ? player1Id : player2Id;
+                
+                // Create the game
+                gameRef.set({
+                    player1: {
+                        id: player1Id,
+                        username: player1Data.username,
+                        profilePicture: player1Data.profilePicture,
+                        marker: 'X',
+                        wins: 0
+                    },
+                    player2: {
+                        id: player2Id,
+                        username: player2Data.username,
+                        profilePicture: player2Data.profilePicture,
+                        marker: 'O',
+                        wins: 0
+                    },
+                    currentRound: 1,
+                    board: ['', '', '', '', '', '', '', '', ''],
+                    currentTurn: firstPlayerId,
+                    status: 'active',
+                    winner: null,
+                    lastMoveTime: firebase.database.ServerValue.TIMESTAMP,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                }).then(() => {
+                    // Update room or matchmaking status
+                    if (roomId.startsWith('-')) {
+                        // It's a matchmaking entry
+                        rtdb.ref('matchmaking/' + roomId).update({
+                            status: 'matched',
+                            gameId: gameRef.key
+                        });
+                    } else {
+                        // It's a private room
+                        rtdb.ref('rooms/' + roomId).update({
+                            status: 'playing',
+                            gameId: gameRef.key
+                        });
+                    }
+                    
+                    // Join the game
+                    joinGame(gameRef.key);
+                });
+            }).catch((error) => {
+                showNotification('Error creating game: ' + error.message, 'bg-red-500');
+            });
+        }
+        
+        function joinGame(gameId) {
+            currentGameId = gameId;
+            
+            // Hide waiting room and show gameplay
+            document.getElementById('waiting-room').classList.add('hidden');
+            showSection('gameplay');
+            
+            resetGameBoard();
+            setupGameListeners(gameId);
+        }
+        
+        function setupGameListeners(gameId) {
+            const gameRef = rtdb.ref('games/' + gameId);
+            
+            gameRef.on('value', (snapshot) => {
+                const gameData = snapshot.val();
+                
+                if (!gameData) {
+                    showNotification('Game not found', 'bg-red-500');
+                    returnToLobby();
+                    return;
+                }
+                
+                // Determine if player is player1 or player2
+                const isPlayer1 = gameData.player1.id === currentUser.uid;
+                const isPlayer2 = gameData.player2.id === currentUser.uid;
+                
+                if (!isPlayer1 && !isPlayer2) {
+                    showNotification('You are not a part of this game', 'bg-red-500');
+                    returnToLobby();
+                    return;
+                }
+                
+                // Set markers
+                playerMarker = isPlayer1 ? gameData.player1.marker : gameData.player2.marker;
+                opponentMarker = isPlayer1 ? gameData.player2.marker : gameData.player1.marker;
+                
+                // Update opponent info
+                const opponent = isPlayer1 ? gameData.player2 : gameData.player1;
+                document.getElementById('opponent-name').textContent = opponent.username;
+                document.getElementById('opponent-image').src = opponent.profilePicture || 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png';
+                
+                // Update player info
+                const player = isPlayer1 ? gameData.player1 : gameData.player2;
+                document.getElementById('player-name').textContent = currentUserData.username;
+                document.getElementById('player-image').src = currentUserData.profilePicture || 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png';
+                
+                // Update round info
+                currentRound = gameData.currentRound;
+                document.getElementById('current-round').textContent = currentRound;
+                
+                // Update round indicators
+                updateRoundIndicators(gameData);
+                
+                // Check if game is over
+                if (gameData.status === 'completed') {
+                    clearInterval(gameTimer);
+                    document.getElementById('game-status').textContent = 'Game Over';
+                    
+                    const player1Wins = gameData.player1.wins || 0;
+                    const player2Wins = gameData.player2.wins || 0;
+                    
+                    let resultTitle = '';
+                    let resultMessage = '';
+                    let xpEarned = 0;
+                    let rankChange = 0;
+                    
+                    if (player1Wins > player2Wins && isPlayer1) {
+                        resultTitle = 'Victory!';
+                        resultMessage = 'Congratulations! You won the match!';
+                        xpEarned = 50;
+                        rankChange = 25;
+                    } else if (player2Wins > player1Wins && isPlayer2) {
+                        resultTitle = 'Victory!';
+                        resultMessage = 'Congratulations! You won the match!';
+                        xpEarned = 50;
+                        rankChange = 25;
+                    } else if (player1Wins === player2Wins) {
+                        resultTitle = 'Match Draw';
+                        resultMessage = 'The match ended in a draw.';
+                        xpEarned = 15;
+                        rankChange = 0;
+                    } else {
+                        resultTitle = 'Defeat';
+                        resultMessage = 'You lost the match. Better luck next time!';
+                        xpEarned = 10;
+                        rankChange = -15;
+                    }
+                    
+                    // Update user stats
+                    updateUserStats(isPlayer1 ? player1Wins > player2Wins : player2Wins > player1Wins, 
+                                   player1Wins === player2Wins, xpEarned, rankChange);
+                    
+                    // Show results modal
+                    document.getElementById('result-title').textContent = resultTitle;
+                    document.getElementById('result-message').textContent = resultMessage;
+                    document.getElementById('xp-earned').textContent = '+' + xpEarned + ' XP';
+                    document.getElementById('rank-change').textContent = rankChange >= 0 ? '+' + rankChange : rankChange;
+                    document.getElementById('rank-change').className = rankChange >= 0 ? 'text-xl font-bold text-green-600' : 'text-xl font-bold text-red-600';
+                    
+                    document.getElementById('results-modal').style.display = 'flex';
+                    
+                    // Stop listening to this game
+                    gameRef.off();
+                    return;
+                }
+                
+                // Update board
+                updateGameBoard(gameData.board);
+                
+                // Check whose turn it is
+                isMyTurn = gameData.currentTurn === currentUser.uid;
+                
+                // Update status
+                document.getElementById('game-status').textContent = isMyTurn ? 'Your Turn' : 'Opponent\'s Turn';
+                document.getElementById('game-message').textContent = isMyTurn ? 
+                    'Make your move by clicking on the board' : 
+                    'Waiting for opponent to make a move';
+                
+                // Update timer
+                if (gameTimer) {
+                    clearInterval(gameTimer);
+                }
+                
+                // Reset timer
+                timerValue = 30;
+                document.getElementById('timer-display').textContent = timerValue;
+                
+                if (gameData.status === 'active') {
+                    startTimer(gameId, gameData.currentTurn);
+                }
+            });
+        }
+        
+        function updateRoundIndicators(gameData) {
+            // Reset all indicators
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById('round' + i).className = 'w-3 h-3 rounded-full bg-gray-300';
+            }
+            
+            // Set current round indicator
+            if (gameData.currentRound <= 3) {
+                document.getElementById('round' + gameData.currentRound).className = 'w-3 h-3 rounded-full bg-blue-500';
+            }
+            
+            // Set completed rounds
+            for (let i = 1; i < gameData.currentRound; i++) {
+                const player1Won = (gameData['round' + i + 'Winner'] === gameData.player1.id);
+                const player2Won = (gameData['round' + i + 'Winner'] === gameData.player2.id);
+                
+                if (player1Won || player2Won) {
+                    const winnerColor = player1Won ? 'bg-red-500' : 'bg-green-500';
+                    document.getElementById('round' + i).className = 'w-3 h-3 rounded-full ' + winnerColor;
+                }
+            }
+        }
+        
+        function startTimer(gameId, currentTurnUserId) {
+            gameTimer = setInterval(() => {
+                timerValue--;
+                document.getElementById('timer-display').textContent = timerValue;
+                
+                if (timerValue <= 10) {
+                    document.getElementById('timer-display').className = 'text-red-500';
+                } else {
+                    document.getElementById('timer-display').className = '';
+                }
+                
+                if (timerValue <= 0) {
+                    clearInterval(gameTimer);
+                    
+                    // If it was my turn, I lose this round due to timeout
+                    if (currentTurnUserId === currentUser.uid) {
+                        timeoutLoss(gameId);
+                    }
+                }
+            }, 1000);
+        }
+        
+        function timeoutLoss(gameId) {
+            const gameRef = rtdb.ref('games/' + gameId);
+            
+            gameRef.once('value')
+                .then((snapshot) => {
+                    const gameData = snapshot.val();
+                    
+                    if (!gameData || gameData.status !== 'active') return;
+                    
+                    // Determine winner (opponent)
+                    const winnerId = gameData.player1.id === currentUser.uid ? gameData.player2.id : gameData.player1.id;
+                    
+                    // Update round winner
+                    const updates = {};
+                    updates['round' + gameData.currentRound + 'Winner'] = winnerId;
+                    
+                    // Increment opponent's win count
+                    if (winnerId === gameData.player1.id) {
+                        updates['player1/wins'] = (gameData.player1.wins || 0) + 1;
+                    } else {
+                        updates['player2/wins'] = (gameData.player2.wins || 0) + 1;
+                    }
+                    
+                    // Check if match is over
+                    const player1Wins = winnerId === gameData.player1.id ? 
+                        (gameData.player1.wins || 0) + 1 : (gameData.player1.wins || 0);
+                    const player2Wins = winnerId === gameData.player2.id ? 
+                        (gameData.player2.wins || 0) + 1 : (gameData.player2.wins || 0);
+                    
+                    if (player1Wins >= 2 || player2Wins >= 2 || gameData.currentRound >= 3) {
+                        // Match is over
+                        updates['status'] = 'completed';
+                        updates['winner'] = player1Wins > player2Wins ? gameData.player1.id : 
+                            (player2Wins > player1Wins ? gameData.player2.id : null);
+                    } else {
+                        // Start next round
+                        updates['currentRound'] = gameData.currentRound + 1;
+                        updates['board'] = ['', '', '', '', '', '', '', '', ''];
+                        updates['currentTurn'] = gameData.currentRound % 2 === 0 ? gameData.player1.id : gameData.player2.id;
+                        updates['lastMoveTime'] = firebase.database.ServerValue.TIMESTAMP;
+                    }
+                    
+                    return gameRef.update(updates);
+                })
+                .catch((error) => {
+                    console.error('Timeout error:', error);
+                });
+        }
+        
+        function makeMove(cellIndex) {
+            if (!isMyTurn || gameBoard[cellIndex] !== '') return;
+            
+            const gameRef = rtdb.ref('games/' + currentGameId);
+            
+            gameRef.once('value')
+                .then((snapshot) => {
+                    const gameData = snapshot.val();
+                    
+                    if (!gameData || gameData.status !== 'active' || gameData.currentTurn !== currentUser.uid) {
+                        return; // Not your turn or game inactive
+                    }
+                    
+                    // Make a copy of the board
+                    const newBoard = [...gameData.board];
+                    
+                    // Update the board
+                    newBoard[cellIndex] = playerMarker;
+                    
+                    // Check for a win
+                    const winningLine = checkWin(newBoard, playerMarker);
+                    const isBoardFull = !newBoard.includes('');
+                    
+                    const updates = {
+                        board: newBoard,
+                        lastMoveTime: firebase.database.ServerValue.TIMESTAMP
+                    };
+                    
+                    if (winningLine) {
+                        // Player won this round
+                        updates['round' + gameData.currentRound + 'Winner'] = currentUser.uid;
+                        
+                        // Increment player's win count
+                        if (gameData.player1.id === currentUser.uid) {
+                            updates['player1/wins'] = (gameData.player1.wins || 0) + 1;
+                        } else {
+                            updates['player2/wins'] = (gameData.player2.wins || 0) + 1;
+                        }
+                        
+                        // Check if match is over
+                        const player1Wins = gameData.player1.id === currentUser.uid ? 
+                            (gameData.player1.wins || 0) + 1 : (gameData.player1.wins || 0);
+                        const player2Wins = gameData.player2.id === currentUser.uid ? 
+                            (gameData.player2.wins || 0) + 1 : (gameData.player2.wins || 0);
+                        
+                        if (player1Wins >= 2 || player2Wins >= 2 || gameData.currentRound >= 3) {
+                            // Match is over
+                            updates['status'] = 'completed';
+                            updates['winner'] = player1Wins > player2Wins ? gameData.player1.id : 
+                                (player2Wins > player1Wins ? gameData.player2.id : null);
+                        } else {
+                            // Start next round
+                            updates['currentRound'] = gameData.currentRound + 1;
+                            updates['board'] = ['', '', '', '', '', '', '', '', ''];
+                            updates['currentTurn'] = gameData.currentRound % 2 === 0 ? gameData.player1.id : gameData.player2.id;
+                        }
+                    } else if (isBoardFull) {
+                        // Round is a draw
+                        updates['round' + gameData.currentRound + 'Winner'] = 'draw';
+                        
+                        // Check if match is over
+                        if (gameData.currentRound >= 3) {
+                            // Match is over
+                            updates['status'] = 'completed';
+                            updates['winner'] = gameData.player1.wins > gameData.player2.wins ? gameData.player1.id : 
+                                (gameData.player2.wins > gameData.player1.wins ? gameData.player2.id : null);
+                        } else {
+                            // Start next round
+                            updates['currentRound'] = gameData.currentRound + 1;
+                            updates['board'] = ['', '', '', '', '', '', '', '', ''];
+                            updates['currentTurn'] = gameData.currentRound % 2 === 0 ? gameData.player1.id : gameData.player2.id;
+                        }
+                    } else {
+                        // Game continues, switch turns
+                        updates['currentTurn'] = gameData.player1.id === currentUser.uid ? gameData.player2.id : gameData.player1.id;
+                    }
+                    
+                    return gameRef.update(updates);
+                })
+                .catch((error) => {
+                    showNotification('Error making move: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        function checkWin(board, marker) {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+                [0, 4, 8], [2, 4, 6]             // Diagonals
+            ];
+            
+            for (const pattern of winPatterns) {
+                if (board[pattern[0]] === marker && 
+                    board[pattern[1]] === marker && 
+                    board[pattern[2]] === marker) {
+                    return pattern;
+                }
+            }
+            
+            return null;
+        }
+        
+        function updateGameBoard(board) {
+            const cells = document.querySelectorAll('.xo-cell');
+            
+            gameBoard = board;
+            
+            cells.forEach((cell, index) => {
+                cell.textContent = board[index];
+                cell.className = 'xo-cell';
+                
+                if (board[index] === 'X') {
+                    cell.classList.add('x-marker');
+                } else if (board[index] === 'O') {
+                    cell.classList.add('o-marker');
+                }
+            });
+        }
+        
+        function resetGameBoard() {
+            const cells = document.querySelectorAll('.xo-cell');
+            
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'xo-cell';
+            });
+            
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            currentRound = 1;
+            roundWins = { player: 0, opponent: 0 };
+            
+            document.getElementById('current-round').textContent = currentRound;
+            
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById('round' + i).className = 'w-3 h-3 rounded-full bg-gray-300';
+            }
+            document.getElementById('round1').className = 'w-3 h-3 rounded-full bg-blue-500';
+        }
+        
+        function leaveGame() {
+            // Confirm before leaving
+            if (!confirm('Are you sure you want to leave this game? You will forfeit the match.')) {
+                return;
+            }
+            
+            if (currentGameId) {
+                const gameRef = rtdb.ref('games/' + currentGameId);
+                
+                gameRef.once('value')
+                    .then((snapshot) => {
+                        const gameData = snapshot.val();
+                        
+                        if (!gameData || gameData.status !== 'active') {
+                            returnToLobby();
+                            return;
+                        }
+                        
+                        // Forfeiting the game, opponent wins
+                        const winnerId = gameData.player1.id === currentUser.uid ? gameData.player2.id : gameData.player1.id;
+                        
+                        const updates = {
+                            status: 'completed',
+                            winner: winnerId,
+                        };
+                        
+                        // Increment opponent's win count for this round
+                        updates['round' + gameData.currentRound + 'Winner'] = winnerId;
+                        
+                        if (winnerId === gameData.player1.id) {
+                            updates['player1/wins'] = (gameData.player1.wins || 0) + 1;
+                        } else {
+                            updates['player2/wins'] = (gameData.player2.wins || 0) + 1;
+                        }
+                        
+                        return gameRef.update(updates);
+                    })
+                    .then(() => {
+                        // Update user stats (player lost)
+                        updateUserStats(false, false, 5, -25); 
+                        
+                        returnToLobby();
+                    })
+                    .catch((error) => {
+                        showNotification('Error leaving game: ' + error.message, 'bg-red-500');
+                        returnToLobby();
+                    });
+            } else {
+                returnToLobby();
+            }
+        }
+        
+        function cancelMatchmaking() {
+            if (currentRoomId) {
+                if (currentRoomId.startsWith('-')) {
+                    // It's a matchmaking entry
+                    rtdb.ref('matchmaking/' + currentRoomId).remove()
+                        .then(() => {
+                            returnToLobby();
+                        })
+                        .catch((error) => {
+                            showNotification('Error canceling matchmaking: ' + error.message, 'bg-red-500');
+                            returnToLobby();
+                        });
+                } else {
+                    // It's a private room
+                    rtdb.ref('rooms/' + currentRoomId).remove()
+                        .then(() => {
+                            returnToLobby();
+                        })
+                        .catch((error) => {
+                            showNotification('Error closing room: ' + error.message, 'bg-red-500');
+                            returnToLobby();
+                        });
+                }
+            } else {
+                returnToLobby();
+            }
+        }
+        
+        function returnToLobby() {
+            // Stop all game listeners
+            if (currentGameId) {
+                rtdb.ref('games/' + currentGameId).off();
+                currentGameId = null;
+            }
+            
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+            
+            // Reset UI
+            document.getElementById('waiting-room').classList.add('hidden');
+            
+            // Go back to game lobby
+            showSection('game');
+        }
+        
+        function updateUserStats(isWin, isDraw, xpEarned, rankChange) {
+            const userRef = db.collection('users').doc(currentUser.uid);
+            
+            userRef.get().then((doc) => {
+                if (!doc.exists) return;
+                
+                const userData = doc.data();
+                
+                const updates = {
+                    xp: (userData.xp || 0) + xpEarned,
+                    points: (userData.points || 1000) + rankChange
+                };
+                
+                if (isWin) {
+                    updates.wins = (userData.wins || 0) + 1;
+                } else if (isDraw) {
+                    updates.draws = (userData.draws || 0) + 1;
+                } else {
+                    updates.losses = (userData.losses || 0) + 1;
+                }
+                
+                return userRef.update(updates);
+            }).catch((error) => {
+                console.error('Error updating stats:', error);
+            });
+        }
+        
+        function closeResultsAndFindNewMatch() {
+            document.getElementById('results-modal').style.display = 'none';
+            findRandomMatch();
+        }
+        
+        function closeResultsAndReturnToLobby() {
+            document.getElementById('results-modal').style.display = 'none';
+            returnToLobby();
+        }
+        
+        // Ranking Functions
+        function loadRankings() {
+            db.collection('users')
+                .orderBy('points', 'desc')
+                .limit(10)
+                .get()
+                .then((snapshot) => {
+                    const rankingList = document.getElementById('ranking-list');
+                    rankingList.innerHTML = '';
+                    
+                    snapshot.forEach((doc, index) => {
+                        const userData = doc.data();
+                        const position = index + 1;
+                        
+                        const rankItem = document.createElement('div');
+                        rankItem.className = 'p-4 grid grid-cols-12 gap-4 items-center rank-item hover:bg-blue-50';
+                        
+                        // Highlight current user
+                        if (doc.id === currentUser.uid) {
+                            rankItem.classList.add('bg-blue-100');
+                        }
+                        
+                        const rankInfo = getRankTitleByPoints(userData.points);
+                        
+                        rankItem.innerHTML = `
+                            <div class="col-span-1 font-bold">${position}</div>
+                            <div class="col-span-5 flex items-center">
+                                <img src="${userData.profilePicture || 'https://cdn.jsdelivr.net/gh/lepture/github-cards@latest/src/default.png'}" alt="${userData.username}" class="w-8 h-8 rounded-full object-cover mr-2">
+                                <div>${userData.username}</div>
+                            </div>
+                            <div class="col-span-2 text-center">${userData.wins || 0}</div>
+                            <div class="col-span-2 text-center">${userData.losses || 0}</div>
+                            <div class="col-span-2 text-center font-bold">${userData.points || 0}</div>
+                        `;
+                        
+                        rankingList.appendChild(rankItem);
+                    });
+                })
+                .catch((error) => {
+                    showNotification('Error loading rankings: ' + error.message, 'bg-red-500');
+                });
+        }
+        
+        // Store Functions
+        function loadStoreItems() {
+            const effectsContainer = document.getElementById('effects-store');
+            const profileContainer = document.getElementById('profile-store');
+            
+            effectsContainer.innerHTML = '';
+            profileContainer.innerHTML = '';
+            
+            // Load effects items
+            storeItems.effects.forEach(item => {
+                const owned = ownedEffects.includes(item.id);
+                
+                const itemElement = document.createElement('div');
+                itemElement.className = 'bg-gray-50 rounded-lg p-4 store-item shadow-sm';
+                
+                itemElement.innerHTML = `
+                    <div class="${item.bgColor} h-40 rounded-lg mb-4 flex items-center justify-center">
+                        <i class="${item.icon} text-4xl ${item.iconColor}"></i>
+                    </div>
+                    <h4 class="font-bold">${item.name}</h4>
+                    <p class="text-sm text-gray-600 mb-4">${item.description}</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-blue-600 font-bold"><i class="fas fa-gem mr-1"></i> ${item.price} XP</div>
+                        ${owned ? 
+                            '<button class="bg-green-500 text-white px-4 py-1 rounded" disabled>Owned</button>' : 
+                            `<button onclick="purchaseItem('${item.id}', ${item.price})" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Buy</button>`
+                        }
+                    </div>
+                `;
+                
+                effectsContainer.appendChild(itemElement);
+            });
+            
+            // Load profile items
+            storeItems.profileItems.forEach(item => {
+                const owned = ownedEffects.includes(item.id);
+                
+                const itemElement = document.createElement('div');
+                itemElement.className = 'bg-gray-50 rounded-lg p-4 store-item shadow-sm';
+                
+                itemElement.innerHTML = `
+                    <div class="${item.bgColor} h-40 rounded-lg mb-4 flex items-center justify-center">
+                        <i class="${item.icon} text-4xl ${item.iconColor}"></i>
+                    </div>
+                    <h4 class="font-bold">${item.name}</h4>
+                    <p class="text-sm text-gray-600 mb-4">${item.description}</p>
+                    <div class="flex justify-between items-center">
+                        <div class="text-blue-600 font-bold"><i class="fas fa-gem mr-1"></i> ${item.price} XP</div>
+                        ${owned ? 
+                            '<button class="bg-green-500 text-white px-4 py-1 rounded" disabled>Owned</button>' : 
+                            `<button onclick="purchaseItem('${item.id}', ${item.price})" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Buy</button>`
+                        }
+                    </div>
+                `;
+                
+                profileContainer.appendChild(itemElement);
+            });
+        }
+        
+        function purchaseItem(itemId, price) {
+            if (currentUserData.xp < price) {
+                showNotification('Not enough XP to purchase this item', 'bg-red-500');
+                return;
+            }
+            
+            if (ownedEffects.includes(itemId)) {
+                showNotification('You already own this item', 'bg-blue-500');
+                return;
+            }
+            
+            const userRef = db.collection('users').doc(currentUser.uid);
+            
+            // Add item to owned items and deduct XP
+            userRef.update({
+                xp: firebase.firestore.FieldValue.increment(-price),
+                ownedItems: firebase.firestore.FieldValue.arrayUnion(itemId)
+            }).then(() => {
+                ownedEffects.push(itemId);
+                showNotification('Item purchased successfully!', 'bg-green-500');
+                
+                // Refresh store and profile
+                loadStoreItems();
+                loadUserProfile(currentUser.uid);
+            }).catch((error) => {
+                showNotification('Purchase failed: ' + error.message, 'bg-red-500');
+            });
+        }
+        
+        // UI Helper Functions
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show the selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Special handling for certain sections
+            if (sectionId === 'ranking') {
+                loadRankings();
+            } else if (sectionId === 'store') {
+                loadStoreItems();
+            }
+        }
+        
+        function showNotification(message, bgColor) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + bgColor;
+            notification.classList.add('show-notification');
+            
+            setTimeout(() => {
+                notification.classList.remove('show-notification');
+            }, 3000);
+        }
+        
+        // Auth state change listener
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                document.getElementById('nav-buttons').classList.remove('hidden');
+                
+                // Load user profile
+                loadUserProfile(user.uid).then(() => {
+                    showSection('profile');
+                });
+            } else {
+                // User is signed out
+                currentUser = null;
+                document.getElementById('nav-buttons').classList.add('hidden');
+                showSection('login');
+            }
+        });
+    </script>
+</body>
+</html>
